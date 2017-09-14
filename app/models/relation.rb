@@ -138,9 +138,7 @@ class Relation < ActiveRecord::Base
       end
 
       if types.length == 1
-        TYPES.detect do |_, type_hash|
-          type_hash[:sym] == types[0]
-        end[0]
+        types[0]
       else
         'mixed'
       end
@@ -180,7 +178,7 @@ class Relation < ActiveRecord::Base
   end
 
   def move_target_dates_by(delta)
-    to.reschedule_by(delta) if relation_type == TYPE_PRECEDES
+    descendant.reschedule_by(delta) if relation_type == TYPE_PRECEDES
   end
 
   def set_dates_of_target

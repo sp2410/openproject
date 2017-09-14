@@ -119,8 +119,7 @@ class WorkPackage < ActiveRecord::Base
 
   #before_save :store_former_parent_id
 
-  after_save :reschedule_following_work_packages,
-             :update_parent_attributes
+  after_save :update_parent_attributes
 
   # TODO: adapt to have them called
   #after_move :remove_invalid_relations,
@@ -658,6 +657,11 @@ class WorkPackage < ActiveRecord::Base
     where.not(id: wp.descendants.select(:to_id))
   end
 
+  def self.order_by_ancestors_first
+    includes(:descendants_relations)
+      .reorder('relations.hierarchy DESC')
+  end
+
   # TODO: check why alias_method does not work
   def leaves
     hierarchy_leaves
@@ -761,42 +765,6 @@ class WorkPackage < ActiveRecord::Base
       issue.relations.each do |relation|
         relation.destroy unless relation.valid?
       end
-    end
-  end
-
-  # Updates start/due dates of following work packages.
-  # If
-  #   * no start/due dates are set
-  #     => no scheduling will happen.
-  #   * a due date is set and the due date is moved backwards
-  #     => following work package is moved backwards as well
-  #   * a due date is set and the due date is moved forward
-  #     => following work package is moved forward to the point that
-  #        the work package is again scheduled to be after this work package.
-  #        If a delay is defined, that delay is adhered to.
-  #   * only a start date is set and the start date is moved backwards
-  #     => following work package is moved backwards as well
-  #   * only a start date is set and the start date is moved forward
-  #     => following work package is moved forward to the point that
-  #        the work package is again scheduled to be after this work package.
-  #        If a delay is defined, that delay is adhered to.
-  def reschedule_following_work_packages
-    delta = date_rescheduling_delta
-
-    if delta < 0
-      relations_from.each { |r| r.move_target_dates_by(delta) }
-    elsif start_date_changed? || due_date_changed?
-      relations_from.each(&:set_dates_of_target)
-    end
-  end
-
-  def date_rescheduling_delta
-    if due_date.present?
-      due_date - (due_date_was || 0)
-    elsif start_date.present?
-      start_date - (start_date_was || 0)
-    else
-      0
     end
   end
 
