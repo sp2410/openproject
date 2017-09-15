@@ -37,15 +37,15 @@ module Relations
     attribute :delay
     attribute :description
 
-    attribute :ancestor
-    attribute :descendant
+    attribute :from_id
+    attribute :to_id
 
-    validate :ancestor do
-      errors.add :ancestor, :error_not_found unless visible_work_packages.exists? model.from_id
+    validate :from_id do
+      errors.add :from_id, :error_not_found unless visible_work_packages.exists? model.from_id
     end
 
-    validate :descendant do
-      errors.add :descendant, :error_not_found unless visible_work_packages.exists? model.to_id
+    validate :to_id do
+      errors.add :to_id, :error_not_found unless visible_work_packages.exists? model.to_id
     end
 
     validate :manage_relations_permission?
@@ -75,7 +75,7 @@ module Relations
     end
 
     def manage_relations?
-      user.allowed_to? :manage_work_package_relations, model.descendant.project
+      user.allowed_to? :manage_work_package_relations, model.ancestor.project
     end
   end
 end

@@ -54,7 +54,7 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
                      THEN 1
                      ELSE 0
                      END,
-        precedes =   CASE
+        follows =    CASE
                      WHEN relations.relation_type = 'precedes'
                      THEN 1
                      ELSE 0
@@ -72,6 +72,16 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
     SQL
 
     ActiveRecord::Base.connection.execute <<-SQL
+      UPDATE
+        relations
+      SET
+        from_id = to_id,
+        to_id = from_id
+      WHERE
+        relation_type = 'precedes'
+    SQL
+
+    ActiveRecord::Base.connection.execute <<-SQL
       INSERT INTO relations
         (from_id, to_id, hierarchy)
       SELECT w1.id, w2.id, 1
@@ -80,124 +90,46 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
       ON w1.id = w2.parent_id
     SQL
 
-    build_closures
+    WorkPackage.rebuild_dag!
 
     relation_types.each do |column|
       change_column_null :relations, column, true
     end
+
+    remove_column :relations, :relation_type
   end
 
   def down
     ActiveRecord::Base.connection.execute <<-SQL
       DELETE FROM relations
       WHERE hierarchy > 0
-      OR #{relation_types.map { |column| "#{column} > 1" }.join(' OR ')}
+      OR #{relation_types.join(' + ')} > 1
+    SQL
+
+    ActiveRecord::Base.connection.execute <<-SQL
+      UPDATE
+        relations
+      SET
+        from_id = to_id,
+        to_id = from_id
+      WHERE
+        follows = 1
     SQL
 
     relation_types.each do |column|
       remove_column :relations, column
     end
 
+    add_column :relations, :relation_type, :string
+
     #ActiveRecord::Base.connection.execute <<-SQL
     #  DELETE FROM relations
     #  WHERE relation_type = 'hierarchy'
     #SQL
-
-    #remove_column :relations, :depth
-  end
-
-  def build_closures
-    say_with_time "building closures" do
-      inserted_rows = 1
-      depth = 1
-
-      while inserted_rows > 0
-        inserted_rows = insert_closure_of_depth(depth)
-
-        circle_results = get_circular(depth)
-
-        unless circle_results.empty?
-          say "Circular dependency (#{circle_results}) detected for wich an automated fix (removal) is attempted now"
-
-          remove_first_non_hierarchy_relation(circle_results)
-
-          circle_results = get_circular(depth)
-
-          raise <<-ERROR
-           Detected a circular dependency which can not be fixed automatically:
-
-           #{circle_results}
-
-           Please attempt to remove the circular dependency by hand and rerun the migration.
-          ERROR
-        end
-
-        depth += 1
-      end
-    end
-  end
-
-  def insert_closure_of_depth(depth)
-    result = ActiveRecord::Base.connection.execute <<-SQL
-      INSERT INTO relations
-        (from_id,
-         to_id,
-         hierarchy,
-         relates,
-         duplicates,
-         blocks,
-         precedes,
-         includes,
-         requires)
-      SELECT
-        r1.from_id,
-        r2.to_id,
-        r1.hierarchy + r2.hierarchy,
-        r1.relates + r2.relates,
-        r1.duplicates + r2.duplicates,
-        r1.blocks + r2.blocks,
-        r1.precedes + r2.precedes,
-        r1.includes + r2.includes,
-        r1.requires + r2.requires
-      FROM relations r1
-      JOIN relations r2
-      ON r1.to_id = r2.from_id
-      AND (#{sum_of_columns(relation_types, 'r1.')} = #{depth})
-      AND (#{sum_of_columns(relation_types, 'r2.')} = 1)
-    SQL
-
-    result.try(:cmd_tuples) || 0
-  end
-
-  def get_circular(depth)
-    ActiveRecord::Base.connection.select_values <<-SQL
-      SELECT r1.from_id, r1.to_id
-      FROM relations r1
-      JOIN relations r2
-      ON r1.from_id = r2.to_id
-      AND r1.to_id = r2.from_id
-      AND (#{sum_of_columns(relation_types, 'r1.')} = 1)
-      AND (#{sum_of_columns(relation_types, 'r2.')} = #{depth})
-    SQL
-  end
-
-  def remove_first_non_hierarchy_relation(ids)
-    ActiveRecord::Base.connection.execute <<-SQL
-      DELETE FROM relations
-      WHERE id IN (
-        SELECT id
-        FROM relations
-        WHERE from_id IN (#{ids.join(', ')})
-        AND to_id IN (#{ids.join(', ')})
-        AND hierarchy != 1
-        AND #{exactly_one_column_eql_1(relation_types - [:hierarchy])}
-        LIMIT 1
-      )
-    SQL
   end
 
   def relation_types
-    %i(hierarchy relates duplicates blocks precedes includes requires)
+    %i(hierarchy relates duplicates blocks follows includes requires)
   end
 
   def exactly_one_column_eql_1(columns, prefix = '')

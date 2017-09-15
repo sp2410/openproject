@@ -64,6 +64,7 @@ describe Relation, type: :model do
     Relation::TYPES.each do |key, type_hash|
       let(:column_name) { type_hash[:sym] }
       let(:type) { key }
+      let(:reversed) { type_hash[:reverse] }
       let(:relation) do
         FactoryGirl.build_stubbed(:relation,
                                   relation_type: nil,
@@ -74,8 +75,11 @@ describe Relation, type: :model do
         let(:column_count) { 1 }
 
         it 'deduces the name from the column' do
-          expect(relation.relation_type)
-            .to eql type
+          if reversed.nil?
+            expect(relation.relation_type).to eq(type)
+          else
+            expect(relation.relation_type).to eq(reversed)
+          end
         end
       end
 
@@ -83,8 +87,11 @@ describe Relation, type: :model do
         let(:column_count) { 2 }
 
         it 'deduces the name from the column' do
-          expect(relation.relation_type)
-            .to eql type
+          if reversed.nil?
+            expect(relation.relation_type).to eq(type)
+          else
+            expect(relation.relation_type).to eq(reversed)
+          end
         end
       end
 
@@ -113,24 +120,40 @@ describe Relation, type: :model do
   end
 
   describe 'follows / precedes' do
-    let(:type) { Relation::TYPE_FOLLOWS }
-    it 'should follows relation should be reversed' do
-      expect(relation.save).to eq(true)
-      relation.reload
+    context 'for FOLLOWS' do
+      let(:type) { Relation::TYPE_FOLLOWS }
 
-      expect(relation.relation_type).to eq(Relation::TYPE_PRECEDES)
-      expect(relation.ancestor).to eq(descendant)
-      expect(relation.descendant).to eq(ancestor)
+      it 'is not reversed' do
+        expect(relation.save).to eq(true)
+        relation.reload
+
+        expect(relation.relation_type).to eq(Relation::TYPE_FOLLOWS)
+        expect(relation.descendant).to eq(descendant)
+        expect(relation.ancestor).to eq(ancestor)
+      end
+
+      it 'fails validation with invalid date and reverses' do
+        relation.delay = 'xx'
+        expect(relation).not_to be_valid
+        expect(relation.save).to eq(false)
+
+        expect(relation.relation_type).to eq(Relation::TYPE_FOLLOWS)
+        expect(relation.descendant).to eq(descendant)
+        expect(relation.ancestor).to eq(ancestor)
+      end
     end
 
-    it 'should fail validation with invalid date reverses' do
-      relation.delay = 'xx'
-      expect(relation).not_to be_valid
-      expect(relation.save).to eq(false)
+    context 'for PRECEDES' do
+      let(:type) { Relation::TYPE_PRECEDES }
 
-      expect(relation.relation_type).to eq(Relation::TYPE_PRECEDES)
-      expect(relation.ancestor).to eq(descendant)
-      expect(relation.descendant).to eq(ancestor)
+      it 'is reversed' do
+        expect(relation.save).to eq(true)
+        relation.reload
+
+        expect(relation.relation_type).to eq(Relation::TYPE_FOLLOWS)
+        expect(relation.ancestor).to eq(descendant)
+        expect(relation.descendant).to eq(ancestor)
+      end
     end
   end
 

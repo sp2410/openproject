@@ -47,7 +47,7 @@ module API
           end
 
           post do
-            rep = representer.new Relation.new, current_user: current_user
+            rep = parse_representer.new Relation.new, current_user: current_user
             relation = rep.from_json request.body.read
             service = ::CreateRelationService.new user: current_user
             call = service.call relation, send_notifications: (params[:notify] != 'false')

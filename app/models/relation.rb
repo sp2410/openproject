@@ -43,6 +43,7 @@ class Relation < ActiveRecord::Base
   TYPE_PARTOF       = 'partof'.freeze
   TYPE_REQUIRES     = 'requires'.freeze
   TYPE_REQUIRED     = 'required'.freeze
+  TYPE_MIXED        = 'mixed'.freeze
 
   TYPES = {
     TYPE_RELATES => {
@@ -63,11 +64,12 @@ class Relation < ActiveRecord::Base
       sym: TYPE_BLOCKS, reverse: TYPE_BLOCKS
     },
     TYPE_PRECEDES => {
-      name: :label_precedes, sym_name: :label_follows, order: 6, sym: TYPE_FOLLOWS
+      name: :label_precedes, sym_name: :label_follows, order: 6,
+      sym: TYPE_FOLLOWS, reverse: TYPE_FOLLOWS
     },
     TYPE_FOLLOWS => {
       name: :label_follows, sym_name: :label_precedes, order: 7,
-      sym: TYPE_PRECEDES, reverse: TYPE_PRECEDES
+      sym: TYPE_PRECEDES
     },
     TYPE_INCLUDES => {
       name: :label_includes, sym_name: :label_part_of, order: 8,
@@ -87,12 +89,14 @@ class Relation < ActiveRecord::Base
     }
   }.freeze
 
-  #validates_inclusion_of :relation_type, in: TYPES.keys + ['hierarchy']
+  validates_inclusion_of :relation_type, in: TYPES.keys + [TYPE_REQUIRED]
   validates_numericality_of :delay, allow_nil: true
 
   validate :validate_sanity_of_relation
 
   before_validation :reverse_if_needed
+
+  before_save :set_type_column
   before_save :update_schedule
 
   attr_accessor :relation_type
@@ -100,7 +104,7 @@ class Relation < ActiveRecord::Base
   def self.relation_column(type)
     if TYPES.key?(type) && TYPES[type][:reverse]
       TYPES[type][:reverse]
-    else
+    elsif TYPES.key?(type)
       type
     end
   end
@@ -121,27 +125,31 @@ class Relation < ActiveRecord::Base
   end
 
   def relation_type=(type)
-    if type
-      column = self.class.relation_column(type)
-
-      send("#{column}=", 1) if column.present?
-    end
-
+    attribute_will_change!('relation_type') if relation_type != type
     @relation_type = type
   end
 
-  # TODO: move parts to typed_dag
+  def relation_type_changed?
+    changed.include?('relation_type')
+  end
+
+  ## TODO: move parts to typed_dag
   def relation_type
-    @relation_type ||= begin
+    if @relation_type.present?
+      @relation_type
+    else
       types = (TYPES.keys & Relation.column_names).select do |name|
         send(name) > 0
       end
 
-      if types.length == 1
-        types[0]
-      else
-        'mixed'
-      end
+      @relation_type = case types.length
+                       when 1
+                         types[0]
+                       when 0
+                         nil
+                       else
+                         TYPE_MIXED
+                       end
     end
   end
 
@@ -169,7 +177,7 @@ class Relation < ActiveRecord::Base
   end
 
   def update_schedule
-    if TYPE_PRECEDES == relation_type
+    if TYPE_FOLLOWS == relation_type
       self.delay ||= 0
     else
       self.delay = nil
@@ -178,7 +186,7 @@ class Relation < ActiveRecord::Base
   end
 
   def move_target_dates_by(delta)
-    descendant.reschedule_by(delta) if relation_type == TYPE_PRECEDES
+    descendant.reschedule_by(delta) if relation_type == TYPE_FOLLOWS
   end
 
   def set_dates_of_target
@@ -189,8 +197,8 @@ class Relation < ActiveRecord::Base
   end
 
   def successor_soonest_start
-    if precedes == 1 && delay && ancestor && (ancestor.start_date || ancestor.due_date)
-      (ancestor.due_date || ancestor.start_date) + 1 + delay
+    if follows == 1 && delay && descendant && (descendant.start_date || descendant.due_date)
+      (descendant.due_date || descendant.start_date) + 1 + delay
     end
   end
 
@@ -227,6 +235,12 @@ class Relation < ActiveRecord::Base
     errors.add :to_id, :not_same_project unless ancestor.project_id == descendant.project_id ||
                                                 Setting.cross_project_work_package_relations?
     errors.add :base, :cant_link_a_work_package_with_a_descendant if shared_hierarchy?
+  end
+
+  def set_type_column
+    column = self.class.relation_column(relation_type)
+
+    send("#{column}=", 1)
   end
 
   # Reverses the relation if needed so that it gets stored in the proper way

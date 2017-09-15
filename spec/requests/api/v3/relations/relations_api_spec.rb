@@ -28,7 +28,7 @@
 
 require 'spec_helper'
 
-describe ::API::V3::Relations::RelationRepresenter, type: :request do
+describe 'API v3 Relation resource', type: :request do
   include API::V3::Utilities::PathHelper
 
   let(:user) { FactoryGirl.create :admin }
@@ -36,7 +36,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
   let!(:from) { FactoryGirl.create :work_package }
   let!(:to) { FactoryGirl.create :work_package }
 
-  let(:type) { "precedes" }
+  let(:type) { "follows" }
   let(:description) { "This first" }
   let(:delay) { 3 }
 
@@ -72,7 +72,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     before do
       expect(Relation.count).to eq 0
 
-      header "Content-Type",  "application/json"
+      header "Content-Type", "application/json"
       post "/api/v3/work_packages/#{from.id}/relations", params.to_json
     end
 
@@ -85,7 +85,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     end
 
     it 'should have created the relation correctly' do
-      rel = described_class.new(Relation.new, current_user: user).from_json last_response.body
+      rel = ::API::V3::Relations::RelationPayloadRepresenter.new(Relation.new, current_user: user).from_json last_response.body
 
       expect(rel.ancestor).to eq from
       expect(rel.descendant).to eq to
@@ -109,7 +109,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     before do
       relation
 
-      header "Content-Type",  "application/json"
+      header "Content-Type", "application/json"
       patch "/api/v3/relations/#{relation.id}", update.to_json
     end
 
@@ -126,7 +126,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     end
 
     it "should return the updated relation" do
-      rel = described_class.new(Relation.new, current_user: user).from_json last_response.body
+      rel = ::API::V3::Relations::RelationPayloadRepresenter.new(Relation.new, current_user: user).from_json last_response.body
 
       expect(rel).to eq relation.reload
     end
@@ -197,7 +197,7 @@ describe ::API::V3::Relations::RelationRepresenter, type: :request do
     before do
       project.add_member! user, role
 
-      header "Content-Type",  "application/json"
+      header "Content-Type", "application/json"
       post "/api/v3/work_packages/#{from.id}/relations", params.to_json
     end
 
