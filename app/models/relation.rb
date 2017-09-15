@@ -247,7 +247,7 @@ class Relation < ActiveRecord::Base
   # Reverses the relation if needed so that it gets stored in the proper way
   def reverse_if_needed
     if TYPES.key?(relation_type) && TYPES[relation_type][:reverse]
-      work_package_tmp = from
+      work_package_tmp = to
       self.to = from
       self.from = work_package_tmp
       self.relation_type = TYPES[relation_type][:reverse]
