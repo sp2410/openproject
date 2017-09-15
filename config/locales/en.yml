@@ -278,10 +278,10 @@ en:
               error_unauthorized: "- The user has no permission to create public queries."
         relation:
           attributes:
-            to_id:
+            to:
               error_not_found: "work package in `to` position not found or not visible"
               error_readonly: "an existing relation's `to` link is immutable"
-            from_id:
+            from:
               error_not_found: "work package in `from` position not found or not visible"
               error_readonly: "an existing relation's `from` link is immutable"
         user:
@@ -344,8 +344,8 @@ en:
         encoded_token: "Enterprise support token"
       relation:
         delay: "Delay"
-        ancestor: "Work package"
-        descendant: "Related work package"
+        from: "Work package"
+        to: "Related work package"
       status:
         is_closed: "Work package closed"
       journal:

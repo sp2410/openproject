@@ -37,15 +37,15 @@ module Relations
     attribute :delay
     attribute :description
 
-    attribute :from_id
-    attribute :to_id
+    attribute :from
+    attribute :to
 
-    validate :from_id do
-      errors.add :from_id, :error_not_found unless visible_work_packages.exists? model.from_id
+    validate :from do
+      errors.add :from, :error_not_found unless visible_work_packages.exists? model.from_id
     end
 
-    validate :to_id do
-      errors.add :to_id, :error_not_found unless visible_work_packages.exists? model.to_id
+    validate :to do
+      errors.add :to, :error_not_found unless visible_work_packages.exists? model.to_id
     end
 
     validate :manage_relations_permission?
