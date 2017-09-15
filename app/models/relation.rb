@@ -43,6 +43,7 @@ class Relation < ActiveRecord::Base
   TYPE_PARTOF       = 'partof'.freeze
   TYPE_REQUIRES     = 'requires'.freeze
   TYPE_REQUIRED     = 'required'.freeze
+  TYPE_HIERARCHY    = 'hierarchy'.freeze
   TYPE_MIXED        = 'mixed'.freeze
 
   TYPES = {
@@ -89,7 +90,7 @@ class Relation < ActiveRecord::Base
     }
   }.freeze
 
-  validates_inclusion_of :relation_type, in: TYPES.keys + [TYPE_REQUIRED]
+  validates_inclusion_of :relation_type, in: TYPES.keys + [TYPE_HIERARCHY]
   validates_numericality_of :delay, allow_nil: true
 
   validate :validate_sanity_of_relation
@@ -104,7 +105,7 @@ class Relation < ActiveRecord::Base
   def self.relation_column(type)
     if TYPES.key?(type) && TYPES[type][:reverse]
       TYPES[type][:reverse]
-    elsif TYPES.key?(type)
+    elsif TYPES.key?(type) || type == TYPE_HIERARCHY
       type
     end
   end
@@ -138,7 +139,7 @@ class Relation < ActiveRecord::Base
     if @relation_type.present?
       @relation_type
     else
-      types = (TYPES.keys & Relation.column_names).select do |name|
+      types = ((TYPES.keys + [TYPE_HIERARCHY]) & Relation.column_names).select do |name|
         send(name) > 0
       end
 

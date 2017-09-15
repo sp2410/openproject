@@ -348,7 +348,7 @@ class WorkPackage < ActiveRecord::Base
   def soonest_start
     @soonest_start ||=
       Relation.of_work_package_or_ancestors(self)
-              .with_type_columns(precedes: 1)
+              .with_type_columns(follows: 1)
               .map(&:successor_soonest_start)
               .compact
               .max
