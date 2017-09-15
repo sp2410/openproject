@@ -927,7 +927,7 @@ describe 'API v3 Work package resource', type: :request do
 
           before do
             [child_1, child_2].each do |c|
-              relation = Relation.new ancestor: work_package, descendant: c, hierarchy: 1
+              relation = Relation.new from: work_package, to: c, hierarchy: 1
               relation.save!(validate: false)
             end
           end

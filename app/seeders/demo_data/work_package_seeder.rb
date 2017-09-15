@@ -119,7 +119,7 @@ module DemoData
 
     def create_relation(to:, from:, type:)
       from.new_relation.tap do |relation|
-        relation.descendant = to
+        relation.to = to
         relation.relation_type = type
         relation.save!
       end

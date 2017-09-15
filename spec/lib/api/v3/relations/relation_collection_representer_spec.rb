@@ -36,8 +36,8 @@ describe ::API::V3::Relations::RelationCollectionRepresenter do
   let(:relations) do
     (1..3).map do
       FactoryGirl.build_stubbed(:relation,
-                                ancestor: work_package,
-                                descendant: FactoryGirl.build_stubbed(:work_package))
+                                from: work_package,
+                                to: FactoryGirl.build_stubbed(:work_package))
     end
   end
 

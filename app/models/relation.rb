@@ -155,7 +155,7 @@ class Relation < ActiveRecord::Base
   end
 
   def other_work_package(work_package)
-    from_id == work_package.id ? descendant : ancestor
+    from_id == work_package.id ? to : from
   end
 
   # Returns the relation type for +work_package+
@@ -187,19 +187,19 @@ class Relation < ActiveRecord::Base
   end
 
   def move_target_dates_by(delta)
-    descendant.reschedule_by(delta) if relation_type == TYPE_FOLLOWS
+    to.reschedule_by(delta) if relation_type == TYPE_FOLLOWS
   end
 
   def set_dates_of_target
     soonest_start = successor_soonest_start
-    if soonest_start && descendant
-      descendant.reschedule_after(soonest_start)
+    if soonest_start && to
+      to.reschedule_after(soonest_start)
     end
   end
 
   def successor_soonest_start
-    if follows == 1 && delay && descendant && (descendant.start_date || descendant.due_date)
-      (descendant.due_date || descendant.start_date) + 1 + delay
+    if follows == 1 && delay && to && (to.start_date || to.due_date)
+      (to.due_date || to.start_date) + 1 + delay
     end
   end
 
@@ -224,16 +224,16 @@ class Relation < ActiveRecord::Base
   end
 
   def shared_hierarchy?
-    ancestor.descendants.include?(descendant) || descendant.ancestors.include?(ancestor)
+    from.descendants.include?(to) || to.ancestors.include?(from)
   end
 
   private
 
   def validate_sanity_of_relation
-    return unless ancestor && descendant
+    return unless from && to
 
     errors.add :to_id, :invalid if from_id == to_id
-    errors.add :to_id, :not_same_project unless ancestor.project_id == descendant.project_id ||
+    errors.add :to_id, :not_same_project unless from.project_id == to.project_id ||
                                                 Setting.cross_project_work_package_relations?
     errors.add :base, :cant_link_a_work_package_with_a_descendant if shared_hierarchy?
   end
@@ -247,9 +247,9 @@ class Relation < ActiveRecord::Base
   # Reverses the relation if needed so that it gets stored in the proper way
   def reverse_if_needed
     if TYPES.key?(relation_type) && TYPES[relation_type][:reverse]
-      work_package_tmp = descendant
-      self.descendant = ancestor
-      self.ancestor = work_package_tmp
+      work_package_tmp = from
+      self.to = from
+      self.from = work_package_tmp
       self.relation_type = TYPES[relation_type][:reverse]
     end
   end

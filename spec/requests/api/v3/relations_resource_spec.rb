@@ -58,13 +58,13 @@ describe 'API v3 Relation resource', type: :request do
   end
   let(:visible_relation) do
     FactoryGirl.create(:relation,
-                       ancestor: work_package,
-                       descendant: visible_work_package)
+                       from: work_package,
+                       to: visible_work_package)
   end
   let(:invisible_relation) do
     FactoryGirl.create(:relation,
-                       ancestor: work_package,
-                       descendant: invisible_work_package)
+                       from: work_package,
+                       to: invisible_work_package)
   end
 
   before do

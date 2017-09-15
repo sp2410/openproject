@@ -45,8 +45,8 @@ describe WorkPackage, type: :model do
       end
       let(:relation_org_dup_1) do
         FactoryGirl.create(:relation,
-                           ancestor: dup_1,
-                           descendant: original,
+                           from: dup_1,
+                           to: original,
                            relation_type: Relation::TYPE_DUPLICATES)
       end
       let(:workflow) do
@@ -72,15 +72,15 @@ describe WorkPackage, type: :model do
         end
         let(:relation_dup_1_dup_2) do
           FactoryGirl.create(:relation,
-                             ancestor: dup_2,
-                             descendant: dup_1,
+                             from: dup_2,
+                             to: dup_1,
                              relation_type: Relation::TYPE_DUPLICATES)
         end
         # circular dependency
         let(:relation_dup_2_org) do
           FactoryGirl.create(:relation,
-                             ancestor: dup_2,
-                             descendant: original,
+                             from: dup_2,
+                             to: original,
                              relation_type: Relation::TYPE_DUPLICATES)
         end
 
@@ -140,8 +140,8 @@ describe WorkPackage, type: :model do
       end
       let(:relation_blocks) do
         FactoryGirl.create(:relation,
-                           ancestor: blocks,
-                           descendant: blocked,
+                           from: blocks,
+                           to: blocked,
                            relation_type: Relation::TYPE_BLOCKS)
       end
 
@@ -242,8 +242,8 @@ describe WorkPackage, type: :model do
       end
       let(:relation_precedes) do
         FactoryGirl.create(:relation,
-                           ancestor: preceding,
-                           descendant: following,
+                           from: preceding,
+                           to: following,
                            relation_type: Relation::TYPE_PRECEDES)
       end
 
@@ -282,8 +282,8 @@ describe WorkPackage, type: :model do
       end
       let!(:relation_1) do
         FactoryGirl.create(:relation,
-                           ancestor: work_package_1,
-                           descendant: work_package_2,
+                           from: work_package_1,
+                           to: work_package_2,
                            relation_type: Relation::TYPE_PRECEDES)
       end
 

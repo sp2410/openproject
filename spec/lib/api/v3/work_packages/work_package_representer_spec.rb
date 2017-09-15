@@ -944,7 +944,7 @@ describe ::API::V3::WorkPackages::WorkPackageRepresenter do
         end
         let(:visible_relation) do
           relation = FactoryGirl.build_stubbed(:relation,
-                                               ancestor: work_package)
+                                               from: work_package)
 
           allow(relation)
             .to receive(:other_work_package)
@@ -964,7 +964,7 @@ describe ::API::V3::WorkPackages::WorkPackageRepresenter do
         end
         let(:invisible_relation) do
           relation = FactoryGirl.build_stubbed(:relation,
-                                               ancestor: work_package)
+                                               from: work_package)
 
           allow(relation)
             .to receive(:other_work_package)

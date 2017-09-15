@@ -34,14 +34,14 @@ describe ::API::V3::Relations::RelationRepresenter do
   let(:from) { FactoryGirl.create :work_package }
   let(:to) { FactoryGirl.create :work_package }
 
-  let(:type) { "precedes" }
+  let(:type) { "follows" }
   let(:description) { "This first" }
   let(:delay) { 3 }
 
   let(:relation) do
     FactoryGirl.create :relation,
-                       ancestor: from,
-                       descendant: to,
+                       from: from,
+                       to: to,
                        relation_type: type,
                        description: description,
                        delay: delay
@@ -75,9 +75,9 @@ describe ::API::V3::Relations::RelationRepresenter do
         },
       },
       "id" => relation.id,
-      "name" => "precedes",
-      "type" => "precedes",
-      "reverseType" => "follows",
+      "name" => "follows",
+      "type" => "follows",
+      "reverseType" => "precedes",
       "description" => description,
       "delay" => delay
     }
@@ -93,8 +93,8 @@ describe ::API::V3::Relations::RelationRepresenter do
     rep = ::API::V3::Relations::RelationRepresenter.new Relation.new, current_user: user
     rel = rep.from_json result.except(:id).to_json
 
-    expect(rel.ancestor).to eq from
-    expect(rel.descendant).to eq to
+    expect(rel.from).to eq from
+    expect(rel.to).to eq to
     expect(rel.delay).to eq delay
     expect(rel.relation_type).to eq type
     expect(rel.description).to eq description

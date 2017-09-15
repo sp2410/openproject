@@ -102,8 +102,8 @@ describe WorkPackage, type: :model do
     end
 
     it 'validate the start date of a work-package is >= start_dates of preceding work_packages' do
-      relation = Relation.new(ancestor: predecessor,
-                              descendant: successor,
+      relation = Relation.new(from: predecessor,
+                              to: successor,
                               relation_type: Relation::TYPE_PRECEDES)
       relation.save!
 

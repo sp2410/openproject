@@ -74,30 +74,30 @@ module API
 
         property :description, render_nil: true
 
-        associated_resource :ancestor,
+        associated_resource :from,
                             as: :from,
                             v3_path: :work_package,
                             representer: ::API::V3::WorkPackages::WorkPackageRepresenter,
                             link_title_attribute: :subject,
                             setter: associated_resource_default_setter(:from,
-                                                                       :ancestor,
+                                                                       :from,
                                                                        :work_package),
-                            getter: associated_resource_default_getter(:ancestor,
+                            getter: associated_resource_default_getter(:from,
                                                                        ::API::V3::WorkPackages::WorkPackageRepresenter),
                             link: associated_resource_default_link(:from,
                                                                    :work_package,
                                                                    -> { false },
                                                                    :subject)
 
-        associated_resource :descendant,
+        associated_resource :to,
                             as: :to,
                             v3_path: :work_package,
                             representer: ::API::V3::WorkPackages::WorkPackageRepresenter,
                             link_title_attribute: :subject,
                             setter: associated_resource_default_setter(:to,
-                                                                       :descendant,
+                                                                       :to,
                                                                        :work_package),
-                            getter: associated_resource_default_getter(:descendant,
+                            getter: associated_resource_default_getter(:to,
                                                                        ::API::V3::WorkPackages::WorkPackageRepresenter),
                             link: associated_resource_default_link(:to,
                                                                    :work_package,
@@ -129,11 +129,11 @@ module API
         end
 
         def manage_relations?
-          current_user_allowed_to :manage_work_package_relations, context: represented.ancestor.project
+          current_user_allowed_to :manage_work_package_relations, context: represented.from.project
         end
 
-        self.to_eager_load = [:descendant,
-                              ancestor: { project: :enabled_modules }]
+        self.to_eager_load = [:to,
+                              from: { project: :enabled_modules }]
       end
     end
   end

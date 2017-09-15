@@ -51,7 +51,7 @@ module API
           work_packages = WorkPackage.table_name
 
           Relation
-            .joins(:ancestor)
+            .joins(:from)
             .where("#{relations}.id" => id)
             .pluck("#{work_packages}.project_id")
             .first
