@@ -120,6 +120,10 @@ class Relation < ActiveRecord::Base
     where("#{_dag_options.type_columns.join(' + ')} = 1")
   end
 
+  def direct?
+    _dag_options.type_columns.one? { |column| send(column) == 1 }
+  end
+
   def self.from_work_package_or_ancestors(work_package)
     where(from_id: work_package.ancestors_relations.select(:from_id))
       .or(where(from_id: work_package.id))

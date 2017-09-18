@@ -31,19 +31,19 @@ require 'spec_helper'
 describe WorkPackage, type: :model do
   describe '#journal' do
     let(:type) { FactoryGirl.create :type }
-    let(:project) {
+    let(:project) do
       FactoryGirl.create :project,
                          types: [type]
-    }
+    end
     let(:status) { FactoryGirl.create :default_status }
     let(:priority) { FactoryGirl.create :priority }
-    let(:work_package) {
+    let(:work_package) do
       FactoryGirl.create(:work_package,
                          project_id: project.id,
                          type: type,
                          description: 'Description',
                          priority: priority)
-    }
+    end
     let(:current_user) { FactoryGirl.create(:user) }
 
     before do
@@ -61,7 +61,9 @@ describe WorkPackage, type: :model do
     end
 
     context 'nothing is changed' do
-      before do work_package.save! end
+      before do
+        work_package.save!
+      end
 
       it { expect(Journal.all.count).to eq(1) }
     end
@@ -326,6 +328,7 @@ describe WorkPackage, type: :model do
           @original_journal_count = work_package.journals.count
 
           work_package.custom_values = [unmodified_custom_value]
+
           work_package.save!
         end
 

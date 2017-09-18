@@ -88,6 +88,7 @@ module Redmine::Acts::Journalized
 
         vestal_journals_options[:only] = Array(result.delete(:only)).map(&:to_s).uniq if result[:only]
         vestal_journals_options[:except] = Array(result.delete(:except)).map(&:to_s).uniq if result[:except]
+        vestal_journals_options[:calculate] = result.delete(:calculate) if result[:calculate]
 
         result
       end

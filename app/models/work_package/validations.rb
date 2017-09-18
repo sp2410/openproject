@@ -59,7 +59,6 @@ module WorkPackage::Validations
 
     validate :validate_parent_exists
     validate :validate_parent_in_same_project
-    validate :validate_children_in_same_project
 
     validate :validate_status_transition
 
@@ -157,14 +156,6 @@ module WorkPackage::Validations
     end
   end
 
-  def validate_children_in_same_project
-    if !Setting.cross_project_work_package_relations? &&
-       children.any? { |child| child.project != project }
-
-      errors.add :children, :cannot_be_in_another_project
-    end
-  end
-
   def validate_status_transition
     if status_changed? && status_exists? && !(type_id_changed? || status_transition_exists?)
       errors.add :status_id, :status_transition_invalid
@@ -192,8 +183,11 @@ module WorkPackage::Validations
     # db. We assign the already instantiated work package with all
     # it's changes as the parent object to the work package's direct
     # children. Other descendants should not have altered parents.
-    all_descendants.each do |wp|
-      wp.parent = self if wp.parent_id == id
+    #
+    # Using a method not requiring an extra db hit.
+    descendants_relations.select(&:direct?).each do |child_relation|
+      child = all_descendants.detect { |wp| wp.id == child_relation.to_id }
+      child.parent = self
     end
 
     copy_descendants_errors(all_descendants)
