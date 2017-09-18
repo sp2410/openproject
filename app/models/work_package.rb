@@ -35,6 +35,7 @@ class WorkPackage < ActiveRecord::Base
   include WorkPackage::AskBeforeDestruction
   include WorkPackage::TimeEntries
   include WorkPackage::Ancestors
+  prepend WorkPackage::Parent
 
   include OpenProject::Journal::AttachmentHelper
 
@@ -559,17 +560,7 @@ class WorkPackage < ActiveRecord::Base
     hierarchy_leaves
   end
 
-  def parent=(work_package)
-    attribute_will_change!(:parent_id) if parent_id != work_package.id
-
-    @parent_id = work_package.id
-
-    super
-  end
-
   protected
-
-  attr_accessor :parent_id
 
   def parent_id
     @parent_id ||= parent && parent.id

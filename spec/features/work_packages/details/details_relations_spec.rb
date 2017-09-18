@@ -92,13 +92,13 @@ describe 'Work package relations tab', js: true, selenium: true do
       FactoryGirl.create :relation,
                          from: work_package,
                          to: to_1,
-                         relation_type: :follows
+                         relation_type: Relation::TYPE_FOLLOWS
     end
     let!(:relation_2) do
       FactoryGirl.create :relation,
                          from: work_package,
                          to: to_2,
-                         relation_type: :relates
+                         relation_type: Relation::TYPE_RELATES
     end
 
     let(:toggle_btn_selector) { '#wp-relation-group-by-toggle' }
