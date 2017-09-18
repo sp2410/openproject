@@ -120,9 +120,9 @@ class Relation < ActiveRecord::Base
     where("#{_dag_options.type_columns.join(' + ')} = 1")
   end
 
-  def self.of_work_package_or_ancestors(work_package)
-    where(to_id: work_package.ancestors_relations.select(:from_id))
-      .or(where(to_id: work_package.id))
+  def self.from_work_package_or_ancestors(work_package)
+    where(from_id: work_package.ancestors_relations.select(:from_id))
+      .or(where(from_id: work_package.id))
   end
 
   def relation_type=(type)
@@ -192,8 +192,8 @@ class Relation < ActiveRecord::Base
 
   def set_dates_of_target
     soonest_start = successor_soonest_start
-    if soonest_start && to
-      to.reschedule_after(soonest_start)
+    if soonest_start && from
+      from.reschedule_after(soonest_start)
     end
   end
 

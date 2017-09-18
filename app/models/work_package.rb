@@ -327,33 +327,6 @@ class WorkPackage < ActiveRecord::Base
     time_entries.update_all(project_id: project.id)
   end
 
-  # Calculates the minimum date that
-  # will not violate the precedes relations (max(due date, start date) + delay)
-  # of this work package or its ancestors
-  # e.g.
-  # AP(due_date: 2017/07/24, delay: 1)-precedes-A
-  #                                             |
-  #                                           parent
-  #                                             |
-  # BP(due_date: 2017/07/22, delay: 2)-precedes-B
-  #                                             |
-  #                                           parent
-  #                                             |
-  # BP(due_date: 2017/07/25, delay: 2)-precedes-C
-  #
-  # Then soonest_start for:
-  #   C is 2017/07/27
-  #   B is 2017/07/25
-  #   A is 2017/07/25
-  def soonest_start
-    @soonest_start ||=
-      Relation.of_work_package_or_ancestors(self)
-              .with_type_columns(follows: 1)
-              .map(&:successor_soonest_start)
-              .compact
-              .max
-  end
-
   # Users/groups the work_package can be assigned to
   extend Forwardable
   def_delegator :project, :possible_assignees, :assignable_assignees

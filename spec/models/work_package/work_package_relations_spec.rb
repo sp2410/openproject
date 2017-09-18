@@ -240,12 +240,6 @@ describe WorkPackage, type: :model do
                            start_date: start_date,
                            due_date: due_date)
       end
-      let(:relation_precedes) do
-        FactoryGirl.create(:relation,
-                           from: preceding,
-                           to: following,
-                           relation_type: Relation::TYPE_PRECEDES)
-      end
 
       shared_examples_for 'following start date' do
         subject { following.reload.start_date }
@@ -254,7 +248,7 @@ describe WorkPackage, type: :model do
       end
 
       before do
-        relation_precedes
+        preceding.precedes << following
       end
 
       it_behaves_like 'following start date'

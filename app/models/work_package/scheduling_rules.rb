@@ -54,18 +54,19 @@ module WorkPackage::SchedulingRules
   def reschedule_following_work_packages
     delta = date_rescheduling_delta
 
+    # TODO: limit to only follows relations
     if delta < 0
-      relations_from.each { |r| r.move_target_dates_by(delta) }
+      relations_to.each { |r| r.move_target_dates_by(delta) }
     elsif start_date_changed? || due_date_changed?
-      relations_from.each(&:set_dates_of_target)
+      relations_to.each(&:set_dates_of_target)
     end
   end
 
   def date_rescheduling_delta
     if due_date.present?
-      due_date - (due_date_was || 0)
+      due_date - (due_date_was || due_date)
     elsif start_date.present?
-      start_date - (start_date_was || 0)
+      start_date - (start_date_was || start_date)
     else
       0
     end
@@ -128,6 +129,34 @@ module WorkPackage::SchedulingRules
       end
     end
   end
+
+  # Calculates the minimum date that
+  # will not violate the precedes relations (max(due date, start date) + delay)
+  # of this work package or its ancestors
+  # e.g.
+  # AP(due_date: 2017/07/24, delay: 1)-precedes-A
+  #                                             |
+  #                                           parent
+  #                                             |
+  # BP(due_date: 2017/07/22, delay: 2)-precedes-B
+  #                                             |
+  #                                           parent
+  #                                             |
+  # BP(due_date: 2017/07/25, delay: 2)-precedes-C
+  #
+  # Then soonest_start for:
+  #   C is 2017/07/27
+  #   B is 2017/07/25
+  #   A is 2017/07/25
+  def soonest_start
+    @soonest_start ||=
+      Relation.from_work_package_or_ancestors(self)
+              .with_type_columns(follows: 1)
+              .map(&:successor_soonest_start)
+              .compact
+              .max
+  end
+
 
   # Returns the time scheduled for this work package.
   #

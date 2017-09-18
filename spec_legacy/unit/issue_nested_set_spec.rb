@@ -26,7 +26,7 @@
 #
 # See doc/COPYRIGHT.rdoc for more details.
 #++
-require 'legacy_spec_helper'
+require_relative '../legacy_spec_helper'
 
 describe 'IssueNestedSet', type: :model do
   include MiniTest::Assertions # refute
@@ -47,10 +47,10 @@ describe 'IssueNestedSet', type: :model do
                              type_id: 1,
                              author_id: 1,
                              subject: 'child',
-                             parent_id: issue.id }
+                             parent: issue }
     end
     assert !child.save
-    refute_empty child.errors[:parent_id]
+    refute_empty child.errors[:parent]
   end
 
   it 'should creating a child in different project should validate if allowed' do
@@ -61,16 +61,16 @@ describe 'IssueNestedSet', type: :model do
                              type_id: 1,
                              author_id: 1,
                              subject: 'child',
-                             parent_id: issue.id }
+                             parent: issue }
     end
     assert child.save
-    assert_empty child.errors[:parent_id]
+    assert_empty child.errors[:parent]
   end
 
   it 'should invalid move to another project' do
     parent1 = create_issue!
-    child =   create_issue!(parent_id: parent1.id)
-    grandchild = create_issue!(parent_id: child.id, type_id: 2)
+    child =   create_issue!(parent: parent1)
+    grandchild = create_issue!(parent: child, type_id: 2)
     Project.find(2).type_ids = [1]
 
     parent1.reload
@@ -92,19 +92,19 @@ describe 'IssueNestedSet', type: :model do
   it 'should moving an to a descendant should not validate' do
     parent1 = create_issue!
     parent2 = create_issue!
-    child =   create_issue!(parent_id: parent1.id)
-    grandchild = create_issue!(parent_id: child.id)
+    child =   create_issue!(parent: parent1)
+    grandchild = create_issue!(parent: child)
 
     child.reload
-    child.parent_id = grandchild.id
+    child.parent = grandchild
     assert !child.save
-    refute_empty child.errors[:parent_id]
+    refute_empty child.errors[:parent]
   end
 
   it 'should moving an issue should keep valid relations only' do
     issue1 = create_issue!
     issue2 = create_issue!
-    issue3 = create_issue!(parent_id: issue2.id)
+    issue3 = create_issue!(parent: issue2)
     issue4 = create_issue!
     (r1 = Relation.new.tap do |i|
       i.attributes = { from: issue1,
@@ -122,7 +122,7 @@ describe 'IssueNestedSet', type: :model do
                              relation_type: Relation::TYPE_PRECEDES }
     end).save!
     issue2.reload
-    issue2.parent_id = issue1.id
+    issue2.parent = issue1
     issue2.save!
     assert !Relation.exists?(r1.id)
     assert !Relation.exists?(r2.id)
@@ -132,8 +132,8 @@ describe 'IssueNestedSet', type: :model do
   it 'should destroy should destroy children' do
     issue1 = create_issue!
     issue2 = create_issue!
-    issue3 = create_issue!(parent_id: issue2.id)
-    issue4 = create_issue!(parent_id: issue1.id)
+    issue3 = create_issue!(parent: issue2)
+    issue4 = create_issue!(parent: issue1)
 
     issue3.add_journal(User.find(2))
     issue3.subject = 'child with journal'
@@ -156,8 +156,8 @@ describe 'IssueNestedSet', type: :model do
 
   it 'should destroy parent work package updated during children destroy' do
     parent = create_issue!
-    create_issue!(start_date: Date.today, parent_id: parent.id)
-    create_issue!(start_date: 2.days.from_now, parent_id: parent.id)
+    create_issue!(start_date: Date.today, parent: parent)
+    create_issue!(start_date: 2.days.from_now, parent: parent)
 
     assert_difference 'WorkPackage.count', -3 do
       WorkPackage.find(parent.id).destroy
@@ -166,8 +166,8 @@ describe 'IssueNestedSet', type: :model do
 
   it 'should destroy child issue with children' do
     root = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'root').reload
-    child = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'child', parent_id: root.id).reload
-    leaf = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'leaf', parent_id: child.id).reload
+    child = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'child', parent: root).reload
+    leaf = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'leaf', parent: child).reload
     leaf.add_journal(User.find(2))
     leaf.subject = 'leaf with journal'
     leaf.save!
@@ -185,10 +185,10 @@ describe 'IssueNestedSet', type: :model do
 
   it 'should destroy issue with grand child' do
     parent = create_issue!
-    issue = create_issue!(parent_id: parent.id)
-    child = create_issue!(parent_id: issue.id)
-    grandchild1 = create_issue!(parent_id: child.id)
-    grandchild2 = create_issue!(parent_id: child.id)
+    issue = create_issue!(parent: parent)
+    child = create_issue!(parent: issue)
+    grandchild1 = create_issue!(parent: child)
+    grandchild2 = create_issue!(parent: child)
 
     assert_difference 'WorkPackage.count', -4 do
       WorkPackage.find(issue.id).destroy
@@ -199,9 +199,9 @@ describe 'IssueNestedSet', type: :model do
 
   it 'should parent dates should be lowest start and highest due dates' do
     parent = create_issue!
-    create_issue!(start_date: '2010-01-25', due_date: '2010-02-15', parent_id: parent.id)
-    create_issue!(due_date: '2010-02-13', parent_id: parent.id)
-    create_issue!(start_date: '2010-02-01', due_date: '2010-02-22', parent_id: parent.id)
+    create_issue!(start_date: '2010-01-25', due_date: '2010-02-15', parent: parent)
+    create_issue!(due_date: '2010-02-13', parent: parent)
+    create_issue!(start_date: '2010-02-01', due_date: '2010-02-22', parent: parent)
     parent.reload
     assert_equal Date.parse('2010-01-25'), parent.start_date
     assert_equal Date.parse('2010-02-22'), parent.due_date
@@ -209,34 +209,34 @@ describe 'IssueNestedSet', type: :model do
 
   it 'should parent done ratio should be average done ratio of leaves' do
     parent = create_issue!
-    create_issue!(done_ratio: 20, parent_id: parent.id)
+    create_issue!(done_ratio: 20, parent: parent)
     assert_equal 20, parent.reload.done_ratio
-    create_issue!(done_ratio: 70, parent_id: parent.id)
+    create_issue!(done_ratio: 70, parent: parent)
     assert_equal 45, parent.reload.done_ratio
 
-    child = create_issue!(done_ratio: 0, parent_id: parent.id)
+    child = create_issue!(done_ratio: 0, parent: parent)
     assert_equal 30, parent.reload.done_ratio
 
-    create_issue!(done_ratio: 30, parent_id: child.id)
+    create_issue!(done_ratio: 30, parent: child)
     assert_equal 30, child.reload.done_ratio
     assert_equal 40, parent.reload.done_ratio
   end
 
   it 'should parent done ratio should be weighted by estimated times if any' do
     parent = create_issue!
-    create_issue!(estimated_hours: 10, done_ratio: 20, parent_id: parent.id)
+    create_issue!(estimated_hours: 10, done_ratio: 20, parent: parent)
     assert_equal 20, parent.reload.done_ratio
-    create_issue!(estimated_hours: 20, done_ratio: 50, parent_id: parent.id)
+    create_issue!(estimated_hours: 20, done_ratio: 50, parent: parent)
     assert_equal (50 * 20 + 20 * 10) / 30, parent.reload.done_ratio
   end
 
   it 'should parent estimate should be sum of leaves' do
     parent = create_issue!
-    create_issue!(estimated_hours: nil, parent_id: parent.id)
+    create_issue!(estimated_hours: nil, parent: parent)
     assert_equal nil, parent.reload.estimated_hours
-    create_issue!(estimated_hours: 5, parent_id: parent.id)
+    create_issue!(estimated_hours: 5, parent: parent)
     assert_equal 5, parent.reload.estimated_hours
-    create_issue!(estimated_hours: 7, parent_id: parent.id)
+    create_issue!(estimated_hours: 7, parent: parent)
     assert_equal 12, parent.reload.estimated_hours
   end
 
@@ -244,10 +244,10 @@ describe 'IssueNestedSet', type: :model do
     first_parent = create_issue!
     second_parent = create_issue!
     child = create_issue!(estimated_hours: 5,
-                          parent_id: first_parent.id)
+                          parent: first_parent)
     assert_equal 5, first_parent.reload.estimated_hours
     child.update_attributes(estimated_hours: 7,
-                            parent_id: second_parent.id)
+                            parent: second_parent)
     assert_equal 7, second_parent.reload.estimated_hours
     assert_nil first_parent.reload.estimated_hours
   end
@@ -256,9 +256,9 @@ describe 'IssueNestedSet', type: :model do
     Project.delete_all # make sure unqiue identifiers
     p = Project.create!(name: 'Tree copy', identifier: 'tree-copy', type_ids: [1, 2])
     i1 = create_issue!(project_id: p.id, subject: 'i1')
-    i2 = create_issue!(project_id: p.id, subject: 'i2', parent_id: i1.id)
-    i3 = create_issue!(project_id: p.id, subject: 'i3', parent_id: i1.id)
-    i4 = create_issue!(project_id: p.id, subject: 'i4', parent_id: i2.id)
+    i2 = create_issue!(project_id: p.id, subject: 'i2', parent: i1)
+    i3 = create_issue!(project_id: p.id, subject: 'i3', parent: i1)
+    i4 = create_issue!(project_id: p.id, subject: 'i4', parent: i2)
     i5 = create_issue!(project_id: p.id, subject: 'i5')
     c = Project.new(name: 'Copy', identifier: 'copy', type_ids: [1, 2])
     c.copy(p, only: 'work_packages')
