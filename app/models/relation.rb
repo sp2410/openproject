@@ -191,7 +191,7 @@ class Relation < ActiveRecord::Base
   end
 
   def move_target_dates_by(delta)
-    to.reschedule_by(delta) if relation_type == TYPE_FOLLOWS
+    from.reschedule_by(delta) if relation_type == TYPE_FOLLOWS
   end
 
   def set_dates_of_target

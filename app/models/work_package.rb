@@ -559,7 +559,22 @@ class WorkPackage < ActiveRecord::Base
     hierarchy_leaves
   end
 
+  def parent=(work_package)
+    attribute_will_change!(:parent_id) if parent_id != work_package.id
+
+    @parent_id = work_package.id
+
+    super
+  end
+
   protected
+
+  attr_accessor :parent_id
+
+  def parent_id
+    @parent_id ||= parent && parent.id
+  end
+
 
   def recalculate_attributes_for(work_package_id)
     p = if work_package_id.is_a? WorkPackage

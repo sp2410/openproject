@@ -55,7 +55,7 @@ describe Queries::Relations::RelationQuery, type: :model do
       it 'is the same as handwriting the query' do
         expected = base_scope
                    .merge(Relation
-                          .where("relations.precedes IN ('1') OR relations.blocks IN ('1')"))
+                          .where("relations.follows IN ('1') OR relations.blocks IN ('1')"))
 
         expect(instance.results.to_sql).to eql expected.to_sql
       end
