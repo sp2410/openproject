@@ -47,9 +47,9 @@ describe 'GET /api/v3/relations', type: :request do
     end
 
     [
-      new_relation(from: work_package, to: other_work_package, type: 'precedes'),
+      new_relation(from: work_package, to: other_work_package, type: 'follows'),
       new_relation(from: work_package, to: new_work_package, type: 'blocks'),
-      new_relation(from: new_work_package, to: work_package, type: 'precedes'),
+      new_relation(from: new_work_package, to: work_package, type: 'follows'),
       new_relation(from: new_work_package, to: new_work_package, type: 'blocks')
     ]
   end

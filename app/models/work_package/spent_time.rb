@@ -51,16 +51,18 @@ class WorkPackage::SpentTime
   end
 
   def join_descendants(select)
-    descendants_join_condition = if work_package
-                                   hierarchy_and_allowed_condition
+    relations_join_condition = if work_package
+                                   relations_from_and_type_matches_condition
                                      .and(wp_table[:id].eq(work_package.id))
                                  else
-                                   hierarchy_and_allowed_condition
+                                   relations_from_and_type_matches_condition
                                  end
 
     select
+      .outer_join(relations_table)
+      .on(relations_join_condition)
       .outer_join(wp_descendants)
-      .on(descendants_join_condition)
+      .on(hierarchy_and_allowed_condition)
   end
 
   def join_time_entries(select)
@@ -71,6 +73,16 @@ class WorkPackage::SpentTime
     select
       .outer_join(time_entries_table)
       .on(join_condition)
+  end
+
+  def relations_from_and_type_matches_condition
+    relations_join_condition = wp_table[:id].eq(relations_table[:from_id]).and(relations_table[:hierarchy].gteq(1))
+
+    non_hierarchy_type_columns.each do |type|
+      relations_join_condition = relations_join_condition.and(relations_table[type].eq(0))
+    end
+
+    relations_join_condition
   end
 
   def allowed_to_view_work_packages
@@ -87,25 +99,22 @@ class WorkPackage::SpentTime
   end
 
   def self_or_descendant_condition
-    nested_set_root_condition
-      .and(nested_set_lft_condition)
-      .and(nested_rgt_condition)
+    descendants_condition = relations_table[:to_id].eq(wp_descendants[:id])
+    self_condition = wp_table[:id].eq(wp_descendants[:id])
+
+    descendants_condition.or(self_condition)
   end
 
-  def nested_set_root_condition
-    wp_descendants[:root_id].eq(wp_table[:root_id])
-  end
-
-  def nested_set_lft_condition
-    wp_descendants[:lft].gteq(wp_table[:lft])
-  end
-
-  def nested_rgt_condition
-    wp_descendants[:rgt].lteq(wp_table[:rgt])
+  def non_hierarchy_type_columns
+    TypedDag::Configuration[WorkPackage].type_columns - [:hierarchy]
   end
 
   def wp_table
     @wp_table ||= WorkPackage.arel_table
+  end
+
+  def relations_table
+    @relations || Relation.arel_table
   end
 
   def wp_descendants
