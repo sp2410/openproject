@@ -171,7 +171,7 @@ module Project::Copy
         # Parent issue
         if issue.parent
           if (copied_parent = work_packages_map[issue.parent.id]) && copied_parent.reload
-            new_issue.parent_relation.from_id = copied_parent.id
+            new_issue.parent = copied_parent
           end
         end
         work_packages << new_issue

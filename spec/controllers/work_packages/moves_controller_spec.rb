@@ -401,22 +401,22 @@ describe WorkPackages::MovesController, type: :controller do
         end
 
         context 'child work package from one project to other' do
-          let(:to_project) {
+          let(:to_project) do
             FactoryGirl.create(:project,
                                types: [type])
-          }
-          let!(:member) {
+          end
+          let!(:member) do
             FactoryGirl.create(:member,
                                user: current_user,
                                roles: [role],
                                project: to_project)
-          }
-          let!(:child_wp) {
+          end
+          let!(:child_wp) do
             FactoryGirl.create(:work_package,
                                type: type,
                                project: project,
                                parent: work_package)
-          }
+          end
 
           shared_examples_for 'successful move' do
             it { expect(flash[:notice]).to eq(I18n.t(:notice_successful_create)) }

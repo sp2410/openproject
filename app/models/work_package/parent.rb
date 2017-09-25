@@ -29,21 +29,61 @@
 #++
 
 module WorkPackage::Parent
-  def parent=(work_package)
-    attribute_will_change!(:parent_id) if parent_id != work_package.id
-
-    @parent_id = work_package.id
-
-    build_parent_relation from: work_package
+  def self.prepended(base)
+    base.after_save :update_parent_relation
   end
 
-  def parent
-    if parent_relation && parent_relation.from != super && parent_relation.new_record?
-      parent_relation.from
+  attr_accessor :parent_object
+
+  def parent=(work_package)
+    attribute_will_change!(:parent_id) if parent_id != (work_package && work_package.id)
+
+    if work_package
+      @parent_id = work_package.id
+      @parent_object = work_package
     else
-      super
+      @parent_object = nil
+      @parent_id = nil
     end
   end
 
-  attr_accessor :parent_id
+  def parent
+    if @parent_object
+      @parent_object
+    else
+      parent_relation && parent_relation.from
+    end
+  end
+
+  def reload(*args)
+    @parent_object = nil
+    @parent_id = nil
+
+    super
+  end
+
+  def parent_id=(id)
+    attribute_will_change!(:parent_id) if parent_id != id
+
+    @parent_object = nil if @parent_object && @parent_object.id != id
+    @parent_id = id
+  end
+
+  def parent_id
+    parent && parent.id
+  end
+
+  private
+
+  def update_parent_relation
+    return unless changes[:parent_id]
+
+    if parent_object
+      create_parent_relation from: parent_object
+    elsif @parent_id
+      create_parent_relation from_id: @parent_id
+    elsif parent_relation
+      parent_relation.destroy
+    end
+  end
 end

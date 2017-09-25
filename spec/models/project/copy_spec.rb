@@ -176,7 +176,9 @@ describe Project::Copy, type: :model do
       describe '#parent' do
         before do
           work_package.parent = work_package2
+          work_package.save!
           work_package2.parent = work_package3
+          work_package2.save!
 
           copy.send :copy_work_packages, project
           copy.save
