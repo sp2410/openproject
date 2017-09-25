@@ -337,6 +337,9 @@ describe WorkPackage, type: :model do
         work_package.parent = other_work_package
         other_work_package.parent = another_work_package
 
+        work_package.save
+        other_work_package.save
+
         work_package.reload
       end
 
@@ -350,6 +353,9 @@ describe WorkPackage, type: :model do
       before do
         other_work_package.parent = work_package
         another_work_package.parent = other_work_package
+
+        other_work_package.save
+        another_work_package.save
 
         work_package.reload
       end
@@ -365,7 +371,11 @@ describe WorkPackage, type: :model do
         other_work_package.parent = work_package
         yet_another_work_package.parent = another_work_package
 
+        other_work_package.save
+        yet_another_work_package.save
+
         another_work_package.parent = other_work_package
+        another_work_package.save!
       end
 
       it 'builds the complete hierarchy' do
@@ -380,6 +390,7 @@ describe WorkPackage, type: :model do
         child_work_package
 
         child_work_package.parent = nil
+        child_work_package.save!
       end
 
       it 'leads to the former parent no longer having children' do
@@ -400,6 +411,7 @@ describe WorkPackage, type: :model do
         grandchild_work_package
 
         child_work_package.parent = nil
+        child_work_package.save!
       end
 
       it 'leads to the former parent no longer having children' do
@@ -421,6 +433,7 @@ describe WorkPackage, type: :model do
         grandgrandchild_work_package
 
         grandchild_work_package.parent = nil
+        grandchild_work_package.save!
       end
 
       it 'leads to the former parent no longer having children' do

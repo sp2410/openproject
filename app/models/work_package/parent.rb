@@ -63,6 +63,8 @@ module WorkPackage::Parent
   end
 
   def parent_id=(id)
+    id = id.to_i > 0 ? id.to_i : nil
+
     attribute_will_change!(:parent_id) if parent_id != id
 
     @parent_object = nil if @parent_object && @parent_object.id != id

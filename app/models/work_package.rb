@@ -127,6 +127,8 @@ class WorkPackage < ActiveRecord::Base
   #after_move :recalculate_attributes_for_former_parent
 
   #after_destroy :update_parent_attributes
+  before_destroy :fetch_children_to_destroy
+  after_destroy :destroy_children
 
   before_create :default_assign
   before_save :close_duplicates, :update_done_ratio_from_status
@@ -857,5 +859,13 @@ class WorkPackage < ActiveRecord::Base
     end
 
     related.select(&:present?)
+  end
+
+  def fetch_children_to_destroy
+    @children_to_destroy = children
+  end
+
+  def destroy_children
+    @children_to_destroy.each(&:destroy)
   end
 end
