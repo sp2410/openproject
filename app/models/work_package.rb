@@ -125,6 +125,7 @@ class WorkPackage < ActiveRecord::Base
   # TODO: adapt to have them called
   #after_move :remove_invalid_relations,
   #after_move :recalculate_attributes_for_former_parent
+  after_save :recalculate_attributes_for_former_parent
 
   #after_destroy :update_parent_attributes
   before_destroy :fetch_children_to_destroy
@@ -562,12 +563,11 @@ class WorkPackage < ActiveRecord::Base
     hierarchy_leaves
   end
 
-  protected
-
-  def parent_id
-    @parent_id ||= parent && parent.id
+  def root?
+    hierarchy_root?
   end
 
+  protected
 
   def recalculate_attributes_for(work_package_id)
     p = if work_package_id.is_a? WorkPackage
@@ -668,12 +668,14 @@ class WorkPackage < ActiveRecord::Base
     end
   end
 
-  #def recalculate_attributes_for_former_parent
-  #  recalculate_attributes_for(@former_parent_id) if @former_parent_id
-  #end
+  def recalculate_attributes_for_former_parent
+    if changes[:parent_id] && changes[:parent_id].first
+      recalculate_attributes_for(changes[:parent_id].first)
+    end
+  end
 
   def reload_lock_and_timestamps
-    reload(select: [:lock_version, :created_at, :updated_at])
+    reload(select: %i(lock_version created_at updated_at))
   end
 
   def <=>(issue)

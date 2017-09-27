@@ -80,12 +80,14 @@ module WorkPackage::Parent
   def update_parent_relation
     return unless changes[:parent_id]
 
+    if parent_relation
+      parent_relation.destroy
+    end
+
     if parent_object
       create_parent_relation from: parent_object
     elsif @parent_id
       create_parent_relation from_id: @parent_id
-    elsif parent_relation
-      parent_relation.destroy
     end
   end
 end

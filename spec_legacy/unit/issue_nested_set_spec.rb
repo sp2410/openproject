@@ -39,56 +39,6 @@ describe 'IssueNestedSet', type: :model do
     WorkPackage.delete_all
   end
 
-  it 'should creating a child in different project should not validate unless allowed' do
-    Setting.cross_project_work_package_relations = '0'
-    issue = create_issue!
-    child = WorkPackage.new.tap do |i|
-      i.attributes = { project_id: 2,
-                             type_id: 1,
-                             author_id: 1,
-                             subject: 'child',
-                             parent: issue }
-    end
-    assert !child.save
-    refute_empty child.errors[:parent]
-  end
-
-  it 'should creating a child in different project should validate if allowed' do
-    Setting.cross_project_work_package_relations = '1'
-    issue = create_issue!
-    child = WorkPackage.new.tap do |i|
-      i.attributes = { project_id: 2,
-                             type_id: 1,
-                             author_id: 1,
-                             subject: 'child',
-                             parent: issue }
-    end
-    assert child.save
-    assert_empty child.errors[:parent]
-  end
-
-  it 'should invalid move to another project' do
-    parent1 = create_issue!
-    child =   create_issue!(parent: parent1)
-    grandchild = create_issue!(parent: child, type_id: 2)
-    Project.find(2).type_ids = [1]
-
-    parent1.reload
-    assert_equal [1, parent1.id, 5], [parent1.project_id, parent1.root_id, parent1.nested_set_span]
-
-    # child can not be moved to Project 2 because its child is on a disabled type
-    service = MoveWorkPackageService.new(child, User.find(1))
-    assert_equal false, service.call(Project.find(2))
-    child.reload
-    grandchild.reload
-    parent1.reload
-
-    # no change
-    assert_equal [1, parent1.id, 5], [parent1.project_id, parent1.root_id, parent1.nested_set_span]
-    assert_equal [1, parent1.id, 3], [child.project_id, child.root_id, child.nested_set_span]
-    assert_equal [1, parent1.id, 1], [grandchild.project_id, grandchild.root_id, grandchild.nested_set_span]
-  end
-
   it 'should moving an to a descendant should not validate' do
     parent1 = create_issue!
     parent2 = create_issue!
@@ -101,59 +51,6 @@ describe 'IssueNestedSet', type: :model do
     refute_empty child.errors[:parent]
   end
 
-  it 'should moving an issue should keep valid relations only' do
-    issue1 = create_issue!
-    issue2 = create_issue!
-    issue3 = create_issue!(parent: issue2)
-    issue4 = create_issue!
-    (r1 = Relation.new.tap do |i|
-      i.attributes = { from: issue1,
-                             to: issue2,
-                             relation_type: Relation::TYPE_PRECEDES }
-    end).save!
-    (r2 = Relation.new.tap do |i|
-      i.attributes = { from: issue1,
-                             to: issue3,
-                             relation_type: Relation::TYPE_PRECEDES }
-    end).save!
-    (r3 = Relation.new.tap do |i|
-      i.attributes = { from: issue2,
-                             to: issue4,
-                             relation_type: Relation::TYPE_PRECEDES }
-    end).save!
-    issue2.reload
-    issue2.parent = issue1
-    issue2.save!
-    assert !Relation.exists?(r1.id)
-    assert !Relation.exists?(r2.id)
-    assert Relation.exists?(r3.id)
-  end
-
-  it 'should destroy should destroy children' do
-    issue1 = create_issue!
-    issue2 = create_issue!
-    issue3 = create_issue!(parent: issue2)
-    issue4 = create_issue!(parent: issue1)
-
-    issue3.add_journal(User.find(2))
-    issue3.subject = 'child with journal'
-    issue3.save!
-
-    assert_difference 'WorkPackage.count', -2 do
-      # FIXME: wrong result returned for Journal.count
-      # assert_difference 'Journal.count', -3 do
-      WorkPackage.find(issue2.id).destroy
-      # end
-    end
-
-    issue1.reload
-    issue4.reload
-    assert !WorkPackage.exists?(issue2.id)
-    assert !WorkPackage.exists?(issue3.id)
-    assert_equal [issue1.id, 3], [issue1.root_id, issue1.nested_set_span]
-    assert_equal [issue1.id, 1], [issue4.root_id, issue4.nested_set_span]
-  end
-
   it 'should destroy parent work package updated during children destroy' do
     parent = create_issue!
     create_issue!(start_date: Date.today, parent: parent)
@@ -161,39 +58,6 @@ describe 'IssueNestedSet', type: :model do
 
     assert_difference 'WorkPackage.count', -3 do
       WorkPackage.find(parent.id).destroy
-    end
-  end
-
-  it 'should destroy child issue with children' do
-    root = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'root').reload
-    child = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'child', parent: root).reload
-    leaf = create_issue!(project_id: 1, author_id: 2, type_id: 1, subject: 'leaf', parent: child).reload
-    leaf.add_journal(User.find(2))
-    leaf.subject = 'leaf with journal'
-    leaf.save!
-
-    total_journals_on_children = leaf.reload.journals.count + child.reload.journals.count
-    assert_difference 'WorkPackage.count', -2 do
-      assert_difference 'Journal.count', -total_journals_on_children do
-        WorkPackage.find(child.id).destroy
-      end
-    end
-
-    root = WorkPackage.find(root.id)
-    assert root.leaf?, "Root issue is not a leaf (lft: #{root.lft}, rgt: #{root.rgt})"
-  end
-
-  it 'should destroy issue with grand child' do
-    parent = create_issue!
-    issue = create_issue!(parent: parent)
-    child = create_issue!(parent: issue)
-    grandchild1 = create_issue!(parent: child)
-    grandchild2 = create_issue!(parent: child)
-
-    assert_difference 'WorkPackage.count', -4 do
-      WorkPackage.find(issue.id).destroy
-      parent.reload
-      assert_equal [1, 2], [parent.lft, parent.rgt], 'parent should not have children'
     end
   end
 
@@ -233,7 +97,7 @@ describe 'IssueNestedSet', type: :model do
   it 'should parent estimate should be sum of leaves' do
     parent = create_issue!
     create_issue!(estimated_hours: nil, parent: parent)
-    assert_equal nil, parent.reload.estimated_hours
+    assert_nil parent.reload.estimated_hours
     create_issue!(estimated_hours: 5, parent: parent)
     assert_equal 5, parent.reload.estimated_hours
     create_issue!(estimated_hours: 7, parent: parent)
