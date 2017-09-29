@@ -118,16 +118,14 @@ class WorkPackage < ActiveRecord::Base
 
   acts_as_watchable
 
-  #before_save :store_former_parent_id
-
   after_save :update_parent_attributes
+  after_destroy :update_parent_attributes
 
   # TODO: adapt to have them called
   #after_move :remove_invalid_relations,
   #after_move :recalculate_attributes_for_former_parent
   after_save :recalculate_attributes_for_former_parent
 
-  #after_destroy :update_parent_attributes
   before_destroy :fetch_children_to_destroy
   after_destroy :destroy_children
 
@@ -653,11 +651,6 @@ class WorkPackage < ActiveRecord::Base
     self.estimated_hours = leaves.sum(:estimated_hours).to_f
     self.estimated_hours = nil if estimated_hours == 0.0
   end
-
-  #def store_former_parent_id
-  #  @former_parent_id = parent_id_changed? ? parent_id_was : false
-  #  true # force callback to return true
-  #end
 
   def remove_invalid_relations
     # delete invalid relations of all descendants

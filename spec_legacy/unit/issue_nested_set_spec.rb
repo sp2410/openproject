@@ -39,9 +39,8 @@ describe 'IssueNestedSet', type: :model do
     WorkPackage.delete_all
   end
 
-  it 'should moving an to a descendant should not validate' do
+  it 'moving to a descendant should not validate' do
     parent1 = create_issue!
-    parent2 = create_issue!
     child =   create_issue!(parent: parent1)
     grandchild = create_issue!(parent: child)
 
@@ -121,9 +120,9 @@ describe 'IssueNestedSet', type: :model do
     p = Project.create!(name: 'Tree copy', identifier: 'tree-copy', type_ids: [1, 2])
     i1 = create_issue!(project_id: p.id, subject: 'i1')
     i2 = create_issue!(project_id: p.id, subject: 'i2', parent: i1)
-    i3 = create_issue!(project_id: p.id, subject: 'i3', parent: i1)
-    i4 = create_issue!(project_id: p.id, subject: 'i4', parent: i2)
-    i5 = create_issue!(project_id: p.id, subject: 'i5')
+    create_issue!(project_id: p.id, subject: 'i3', parent: i1)
+    create_issue!(project_id: p.id, subject: 'i4', parent: i2)
+    create_issue!(project_id: p.id, subject: 'i5')
     c = Project.new(name: 'Copy', identifier: 'copy', type_ids: [1, 2])
     c.copy(p, only: 'work_packages')
     c.reload
@@ -139,9 +138,9 @@ describe 'IssueNestedSet', type: :model do
 
   # Helper that creates an issue with default attributes
   def create_issue!(attributes = {})
-    (i = WorkPackage.new.tap do |i|
+    (i = WorkPackage.new.tap do |wp|
       attr = { project_id: 1, type_id: 1, author_id: 1, subject: 'test' }.merge(attributes)
-      i.attributes = attr
+      wp.attributes = attr
     end).save!
     i
   end

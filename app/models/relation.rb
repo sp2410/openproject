@@ -228,7 +228,11 @@ class Relation < ActiveRecord::Base
   end
 
   def shared_hierarchy?
-    from.descendants.include?(to) || to.ancestors.include?(from)
+    # TODO: move to typed_dag
+    from.descendants.include?(to) ||
+      to.ancestors.include?(from) ||
+      to.descendants.include?(from) ||
+      from.ancestors.include?(to)
   end
 
   private
