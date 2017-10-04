@@ -100,9 +100,7 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
     add_column :work_packages, :rgt, :integer
 
     add_index :work_packages, :parent_id
-    add_index :work_packages, :root_id
-    add_index :work_packages, :lft
-    add_index :work_packages, :rgt
+    add_index :work_packages, %i(root_id lft rgt)
   end
 
   def truncate_closure_entries

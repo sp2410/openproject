@@ -190,9 +190,7 @@ class TimeEntries::ReportsController < ApplicationController
     elsif @issue.nil?
       @project.project_condition(Setting.display_subprojects_work_packages?)
     else
-      "#{WorkPackage.table_name}.root_id = #{@issue.root_id}" +
-        " AND #{WorkPackage.table_name}.lft >= #{@issue.lft}" +
-        " AND #{WorkPackage.table_name}.rgt <= #{@issue.rgt}"
+      WorkPackage.child_of_condition(@issue)
     end
   end
 

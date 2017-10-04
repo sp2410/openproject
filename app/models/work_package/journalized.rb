@@ -32,8 +32,7 @@ module WorkPackage::Journalized
   extend ActiveSupport::Concern
 
   included do
-    acts_as_journalized except: ['root_id'],
-                        calculate: -> { { parent_id: parent && parent.id } }
+    acts_as_journalized calculate: -> { { parent_id: parent && parent.id } }
 
     # This one is here only to ease reading
     module JournalizedProcs

@@ -75,6 +75,10 @@ module WorkPackage::Parent
     parent && parent.id
   end
 
+  def parent_id_changed?
+    !!changes[:parent_id]
+  end
+
   private
 
   def update_parent_relation

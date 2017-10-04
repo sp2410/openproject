@@ -187,10 +187,6 @@ class WorkPackage < ActiveRecord::Base
 
   def copy_from(arg, options = {})
     merged_options = { exclude: ['id',
-                                 'root_id',
-                                 'parent_id',
-                                 'lft',
-                                 'rgt',
                                  'type', # type_id is in options, type is for STI.
                                  'created_at',
                                  'updated_at'] + (options[:exclude] || []).map(&:to_s) }
@@ -556,6 +552,14 @@ class WorkPackage < ActiveRecord::Base
       .reorder('relations.hierarchy DESC')
   end
 
+  def self.child_of_condition(work_package)
+    relation_subquery = Relation
+                        .with_type_columns_not(hierarchy: 0)
+                        .select(:to_id)
+                        .where(from_id: work_package.id)
+    "#{table_name}.id IN #{relation_subquery.to_sql}"
+  end
+
   # TODO: check why alias_method does not work
   def leaves
     hierarchy_leaves
@@ -671,17 +675,9 @@ class WorkPackage < ActiveRecord::Base
     reload(select: %i(lock_version created_at updated_at))
   end
 
-  def <=>(issue)
-    if issue.nil?
-      -1
-    elsif root_id != issue.root_id
-      (root_id || 0) <=> (issue.root_id || 0)
-    else
-      (lft || 0) <=> (issue.lft || 0)
-    end
+  def <=>(other)
+    other.id <=> id
   end
-
-  # End ReportsController extraction
 
   private
 
