@@ -312,7 +312,12 @@ module Api
         work_packages = WorkPackage
                         .for_projects(projects)
                         .changed_since(@since)
-                        .includes(:status, :project, :type, :ancestors_relations, :descendants_relations, custom_values: :custom_field)
+                        .includes(:status,
+                                  :project,
+                                  :type,
+                                  :ancestors_relations,
+                                  :descendants_relations,
+                                  custom_values: :custom_field)
                         .references(:projects)
 
         wp_ids = parse_work_package_ids
@@ -372,7 +377,7 @@ module Api
           # re-wire the parent of this pe to the first ancestor found in the filtered set
           # re-wiring is only needed, when there is actually a parent, and the parent has been filtered out
           if !orig.ancestors_relations.empty?
-            struct = structs.detect { |struct| struct.id == orig.id }
+            struct = structs.detect { |s| s.id == orig.id }
             ancestor_candidates = orig.ancestors_relations.sort_by(&:hierarchy).map(&:from_id)
             struct.parent_id = (filtered_ids & ancestor_candidates).first
           end
@@ -390,9 +395,7 @@ module Api
 
       def set_ancestors(origs, structs)
         origs.each do |orig|
-          struct = structs.detect { |struct| struct.id == orig.id }
-
-          ancestor_candidates = orig.ancestors_relations.sort_by(&:hierarchy).map(&:from_id)
+          struct = structs.detect { |s| s.id == orig.id }
 
           struct.parent_id = orig.ancestors_relations.sort_by(&:hierarchy).map(&:from_id).first
 

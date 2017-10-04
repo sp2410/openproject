@@ -1,4 +1,5 @@
 #-- encoding: UTF-8
+
 #-- copyright
 # OpenProject is a project management system.
 # Copyright (C) 2012-2017 the OpenProject Foundation (OPF)
@@ -51,16 +52,9 @@ class WorkPackage::SpentTime
   end
 
   def join_descendants(select)
-    relations_join_condition = if work_package
-                                   relations_from_and_type_matches_condition
-                                     .and(wp_table[:id].eq(work_package.id))
-                                 else
-                                   relations_from_and_type_matches_condition
-                                 end
-
     select
       .outer_join(relations_table)
-      .on(relations_join_condition)
+      .on(relations_join_descendants_condition)
       .outer_join(wp_descendants)
       .on(hierarchy_and_allowed_condition)
   end
@@ -76,13 +70,26 @@ class WorkPackage::SpentTime
   end
 
   def relations_from_and_type_matches_condition
-    relations_join_condition = wp_table[:id].eq(relations_table[:from_id]).and(relations_table[:hierarchy].gteq(1))
+    relations_join_condition = relation_of_wp_and_hierarchy_condition
 
     non_hierarchy_type_columns.each do |type|
       relations_join_condition = relations_join_condition.and(relations_table[type].eq(0))
     end
 
     relations_join_condition
+  end
+
+  def relation_of_wp_and_hierarchy_condition
+    wp_table[:id].eq(relations_table[:from_id]).and(relations_table[:hierarchy].gteq(1))
+  end
+
+  def relations_join_descendants_condition
+    if work_package
+      relations_from_and_type_matches_condition
+        .and(wp_table[:id].eq(work_package.id))
+    else
+      relations_from_and_type_matches_condition
+    end
   end
 
   def allowed_to_view_work_packages
