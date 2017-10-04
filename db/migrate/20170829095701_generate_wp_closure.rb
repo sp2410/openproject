@@ -28,13 +28,110 @@
 
 class GenerateWpClosure < ActiveRecord::Migration[5.0]
   def up
+    add_relation_type_column
+
+    update_relation_column_from_relation_type
+
+    invert_from_to_on_follows("relation_type = 'precedes'")
+
+    insert_hierarchy_relation_for_parent
+
+    WorkPackage.rebuild_dag!
+
+    relation_types.each do |column|
+      change_column_null :relations, column, true
+    end
+
+    remove_column :relations, :relation_type
+
+    remove_nested_set_columns
+  end
+
+  def down
+    recreate_nested_set_columns
+
+    invert_from_to_on_follows('follows = 1')
+
+    truncate_closure_entries
+
+    set_parent_id
+
+    remove_hierarchy_relations
+
+    fill_relation_type_column
+
+    remove_relation_type_specific_columns
+
+    rebuild_nested_set
+  end
+
+  def relation_types
+    %i(hierarchy relates duplicates blocks follows includes requires)
+  end
+
+  def add_relation_type_column
     change_table :relations do |r|
       relation_types.each do |column|
         r.column column, :integer, default: 0
         r.index column
       end
     end
+  end
 
+  def exactly_one_column_eql_1(columns, prefix = '')
+    columns.map { |column| "#{prefix}#{column} = 1" }.join(' XOR ')
+  end
+
+  def sum_of_columns(columns, prefix = '')
+    columns.map { |column| "#{prefix}#{column}" }.join(' + ')
+  end
+
+  def remove_nested_set_columns
+    remove_column :work_packages, :parent_id
+    remove_column :work_packages, :root_id
+    remove_column :work_packages, :lft
+    remove_column :work_packages, :rgt
+  end
+
+  def recreate_nested_set_columns
+    add_column :work_packages, :parent_id, :integer
+    add_column :work_packages, :root_id, :integer
+    add_column :work_packages, :lft, :integer
+    add_column :work_packages, :rgt, :integer
+
+    add_index :work_packages, :parent_id
+    add_index :work_packages, :root_id
+    add_index :work_packages, :lft
+    add_index :work_packages, :rgt
+  end
+
+  def truncate_closure_entries
+    ActiveRecord::Base.connection.execute <<-SQL
+      DELETE FROM relations
+      WHERE #{relation_types.join(' + ')} > 1
+    SQL
+  end
+
+  def remove_hierarchy_relations
+    ActiveRecord::Base.connection.execute <<-SQL
+      DELETE FROM relations
+      WHERE hierarchy > 0
+    SQL
+  end
+
+  def invert_from_to_on_follows(condition)
+    ActiveRecord::Base.connection.execute <<-SQL
+      UPDATE
+        relations
+      SET
+        from_id = to_id,
+        to_id = from_id
+      WHERE
+        #{condition}
+    SQL
+  end
+
+  def update_relation_column_from_relation_type
     ActiveRecord::Base.connection.execute <<-SQL
       UPDATE
         relations
@@ -70,17 +167,9 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
                      ELSE 0
                      END
     SQL
+  end
 
-    ActiveRecord::Base.connection.execute <<-SQL
-      UPDATE
-        relations
-      SET
-        from_id = to_id,
-        to_id = from_id
-      WHERE
-        relation_type = 'precedes'
-    SQL
-
+  def insert_hierarchy_relation_for_parent
     ActiveRecord::Base.connection.execute <<-SQL
       INSERT INTO relations
         (from_id, to_id, hierarchy)
@@ -89,54 +178,56 @@ class GenerateWpClosure < ActiveRecord::Migration[5.0]
       JOIN work_packages w2
       ON w1.id = w2.parent_id
     SQL
-
-    WorkPackage.rebuild_dag!
-
-    relation_types.each do |column|
-      change_column_null :relations, column, true
-    end
-
-    remove_column :relations, :relation_type
   end
 
-  def down
+  def set_parent_id
     ActiveRecord::Base.connection.execute <<-SQL
-      DELETE FROM relations
-      WHERE hierarchy > 0
-      OR #{relation_types.join(' + ')} > 1
+      UPDATE
+        work_packages
+      SET
+        parent_id = (SELECT from_id FROM relations WHERE to_id = work_packages.id AND relations.hierarchy = 1)
     SQL
+  end
+
+  def fill_relation_type_column
+    add_column :relations, :relation_type, :string
 
     ActiveRecord::Base.connection.execute <<-SQL
       UPDATE
         relations
       SET
-        from_id = to_id,
-        to_id = from_id
-      WHERE
-        follows = 1
+        relation_type = CASE
+                        WHEN relations.relates = 1
+                        THEN 'relates'
+                        WHEN relations.duplicates = 1
+                        THEN 'duplicates'
+                        WHEN relations.duplicates = 1
+                        THEN 'blocks'
+                        WHEN relations.follows = 1
+                        THEN 'precedes'
+                        WHEN relations.includes = 1
+                        THEN 'includes'
+                        WHEN relations.requires = 1
+                        THEN 'requires'
+                        END
     SQL
+  end
 
+  def remove_relation_type_specific_columns
     relation_types.each do |column|
       remove_column :relations, column
     end
-
-    add_column :relations, :relation_type, :string
-
-    #ActiveRecord::Base.connection.execute <<-SQL
-    #  DELETE FROM relations
-    #  WHERE relation_type = 'hierarchy'
-    #SQL
   end
 
-  def relation_types
-    %i(hierarchy relates duplicates blocks follows includes requires)
+  def rebuild_nested_set
+    NestedSetWorkPackage.rebuild_silently!
   end
 
-  def exactly_one_column_eql_1(columns, prefix = '')
-    columns.map { |column| "#{prefix}#{column} = 1" }.join(' XOR ')
-  end
+  class NestedSetWorkPackage < ActiveRecord::Base
+    self.table_name = 'work_packages'
 
-  def sum_of_columns(columns, prefix = '')
-    columns.map { |column| "#{prefix}#{column}" }.join(' + ')
+    acts_as_nested_set scope: 'root_id', dependent: :destroy
+
+    include OpenProject::NestedSet::RebuildPatch
   end
 end
