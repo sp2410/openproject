@@ -208,7 +208,7 @@ class Relation < ActiveRecord::Base
   end
 
   def successor_soonest_start
-    if follows == 1 && delay && to && (to.start_date || to.due_date)
+    if relation_type == TYPE_FOLLOWS && (to.start_date || to.due_date)
       (to.due_date || to.start_date) + 1 + delay
     end
   end

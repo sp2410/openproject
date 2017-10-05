@@ -255,6 +255,7 @@ describe WorkPackage, type: :model do
 
       describe 'preceding end date change' do
         before do
+          preceding.reload
           preceding.due_date = Date.today + 5
           preceding.save!
         end
