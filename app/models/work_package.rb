@@ -36,6 +36,7 @@ class WorkPackage < ActiveRecord::Base
   include WorkPackage::TimeEntries
   include WorkPackage::Ancestors
   prepend WorkPackage::Parent
+  include WorkPackage::TypedDagDefaults
 
   include OpenProject::Journal::AttachmentHelper
 
@@ -558,15 +559,6 @@ class WorkPackage < ActiveRecord::Base
                         .select(:to_id)
                         .where(from_id: work_package.id)
     "#{table_name}.id IN (#{relation_subquery.to_sql}) OR #{table_name}.id = #{work_package.id}"
-  end
-
-  # TODO: check why alias_method does not work
-  def leaves
-    hierarchy_leaves
-  end
-
-  def root?
-    hierarchy_root?
   end
 
   protected

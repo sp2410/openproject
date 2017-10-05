@@ -54,11 +54,10 @@ module WorkPackage::SchedulingRules
   def reschedule_following_work_packages
     delta = date_rescheduling_delta
 
-    # TODO: limit to only follows relations
     if delta < 0
-      relations_to.each { |r| r.move_target_dates_by(delta) }
+      precedes_relations.each { |r| r.move_target_dates_by(delta) }
     elsif start_date_changed? || due_date_changed?
-      relations_to.each(&:set_dates_of_target)
+      precedes_relations.each(&:set_dates_of_target)
     end
   end
 
