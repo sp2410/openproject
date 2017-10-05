@@ -119,6 +119,10 @@ class Relation < ActiveRecord::Base
     where(hierarchy: 0)
   end
 
+  def self.hierarchy
+    with_type_columns_not(hierarchy: 0)
+  end
+
   # TODO: move to typed_dag
   def self.direct
     where("#{_dag_options.type_columns.join(' + ')} = 1")
@@ -235,10 +239,12 @@ class Relation < ActiveRecord::Base
 
   def shared_hierarchy?
     # TODO: move to typed_dag
-    from.descendants.include?(to) ||
-      to.ancestors.include?(from) ||
-      to.descendants.include?(from) ||
-      from.ancestors.include?(to)
+    to_from = Relation.hierarchy.where(to: to, from: from)
+    from_to = Relation.hierarchy.where(to: from, from: to)
+
+    to_from
+      .or(from_to)
+      .any?
   end
 
   private

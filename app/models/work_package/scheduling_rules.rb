@@ -76,7 +76,7 @@ module WorkPackage::SchedulingRules
 
     if leaf?
       # Avoid setting the dates if either is unset
-      return if (start_date.nil? || due_date.nil?)
+      return if start_date.nil? || due_date.nil?
 
       # HACK: On some more deeply nested settings (not sure what causes it)
       # the work package can already have been updated by one of the other after_save hooks.
@@ -155,7 +155,6 @@ module WorkPackage::SchedulingRules
               .compact
               .max
   end
-
 
   # Returns the time scheduled for this work package.
   #
