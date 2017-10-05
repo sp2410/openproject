@@ -115,6 +115,10 @@ class Relation < ActiveRecord::Base
       .where(to_id: WorkPackage.visible(user))
   end
 
+  def self.non_hierarchy
+    where(hierarchy: 0)
+  end
+
   # TODO: move to typed_dag
   def self.direct
     where("#{_dag_options.type_columns.join(' + ')} = 1")
@@ -178,7 +182,9 @@ class Relation < ActiveRecord::Base
   end
 
   def label_for(work_package)
-    TYPES[relation_type] ? TYPES[relation_type][(from_id == work_package.id) ? :name : :sym_name] : :unknown
+    key = from_id == work_package.id ? :name : :sym_name
+
+    TYPES[relation_type] ? TYPES[relation_type][key] : :unknown
   end
 
   def update_schedule
@@ -207,8 +213,8 @@ class Relation < ActiveRecord::Base
     end
   end
 
-  def <=>(relation)
-    TYPES[relation_type][:order] <=> TYPES[relation.relation_type][:order]
+  def <=>(other)
+    TYPES[relation_type][:order] <=> TYPES[other.relation_type][:order]
   end
 
   # delay is an attribute of Relation but its getter is masked by delayed_job's #delay method

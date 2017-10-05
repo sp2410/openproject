@@ -190,7 +190,7 @@ class TimeEntries::ReportsController < ApplicationController
     elsif @issue.nil?
       @project.project_condition(Setting.display_subprojects_work_packages?)
     else
-      WorkPackage.child_of_condition(@issue)
+      WorkPackage.self_and_descendants_of_condition(@issue)
     end
   end
 

@@ -86,7 +86,7 @@ module Redmine::Acts::Journalized
       def prepare_journaled_options(options)
         result = super(options)
 
-        assign_vestal = lambda { |key, array|
+        assign_vestal = lambda do |key, array|
           return unless result[key]
 
           vestal_journals_options[key] = if array
@@ -94,7 +94,7 @@ module Redmine::Acts::Journalized
                                          else
                                            result.delete(key)
                                          end
-        }
+        end
 
         assign_vestal.call(:only, true)
         assign_vestal.call(:except, true)

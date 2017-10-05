@@ -54,8 +54,10 @@ class Queries::WorkPackages::Columns::PropertyColumn < Queries::WorkPackages::Co
       groupable: true
     },
     parent: {
-      association: 'parent_relation',
-      sortable: ["to_id"],
+      association: 'ancestors_relations',
+      sortable: ["COALESCE(#{Relation.table_name}.from_id, #{WorkPackage.table_name}.id)",
+                 "#{Relation.table_name}.hierarchy",
+                 "#{WorkPackage.table_name}.id"],
       default_order: 'asc'
     },
     status: {

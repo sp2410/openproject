@@ -552,12 +552,12 @@ class WorkPackage < ActiveRecord::Base
       .reorder('relations.hierarchy DESC')
   end
 
-  def self.child_of_condition(work_package)
+  def self.self_and_descendants_of_condition(work_package)
     relation_subquery = Relation
                         .with_type_columns_not(hierarchy: 0)
                         .select(:to_id)
                         .where(from_id: work_package.id)
-    "#{table_name}.id IN #{relation_subquery.to_sql}"
+    "#{table_name}.id IN (#{relation_subquery.to_sql}) OR #{table_name}.id = #{work_package.id}"
   end
 
   # TODO: check why alias_method does not work
