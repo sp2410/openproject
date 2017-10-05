@@ -177,7 +177,7 @@ module Project::Copy
         work_packages << new_issue
 
         if new_issue.new_record?
-          logger.info "Project#copy_work_packages: work unit ##{issue.id} could not be copied: #{new_issue.errors.full_messages}" if logger && logger.info
+          logger.info "Project#copy_work_packages: work package ##{issue.id} could not be copied: #{new_issue.errors.full_messages}" if logger && logger.info
         else
           work_packages_map[issue.id] = new_issue unless new_issue.new_record?
         end

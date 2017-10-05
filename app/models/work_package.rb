@@ -549,8 +549,14 @@ class WorkPackage < ActiveRecord::Base
   end
 
   def self.order_by_ancestors_first
-    includes(:descendants_relations)
-      .reorder('relations.hierarchy DESC')
+    max_relation_depth = Relation
+                         .hierarchy
+                         .group(:to_id)
+                         .select(:to_id,
+                                 "MAX(hierarchy) AS depth")
+
+    joins("LEFT OUTER JOIN (#{max_relation_depth.to_sql}) AS max_depth ON max_depth.to_id = work_packages.id")
+      .reorder('COALESCE(max_depth.depth, 0) ASC')
   end
 
   def self.self_and_descendants_of_condition(work_package)
