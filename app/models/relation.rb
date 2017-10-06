@@ -115,23 +115,6 @@ class Relation < ActiveRecord::Base
       .where(to_id: WorkPackage.visible(user))
   end
 
-  def self.non_hierarchy
-    where(hierarchy: 0)
-  end
-
-  def self.hierarchy
-    with_type_columns_not(hierarchy: 0)
-  end
-
-  # TODO: move to typed_dag
-  def self.direct
-    where("#{_dag_options.type_columns.join(' + ')} = 1")
-  end
-
-  def direct?
-    _dag_options.type_columns.one? { |column| send(column) == 1 }
-  end
-
   def self.from_work_package_or_ancestors(work_package)
     where(from_id: work_package.ancestors_relations.select(:from_id))
       .or(where(from_id: work_package.id))
