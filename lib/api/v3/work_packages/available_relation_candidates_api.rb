@@ -42,8 +42,12 @@ module API
             from = @work_package
             work_packages = work_package_queried params[:query], from, params[:pageSize]
 
+            # MySQL does not support LIMIT inside a subquery
+            # As the representer wraps the work_packages scope
+            # into a subquery and the scope contains a LIMIT we force
+            # executing the scope via to_a.
             ::API::V3::WorkPackages::WorkPackageListRepresenter.new(
-              work_packages,
+              work_packages.to_a,
               api_v3_paths.available_relation_candidates(from.id),
               current_user: current_user
             )
